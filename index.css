@@ -1,4 +1,4 @@
-html, body, div
+html, body
 {
     border: none;
     margin: 0;
@@ -7,10 +7,15 @@ html, body, div
     height: 100%;
 }
 
-#web_view
+body
 {
+    position: relative;
+}
+
+body > *
+{
+    position: absolute;
     border: none;
-    display: block;
     width: 100%;
     height: 100%;
 }
