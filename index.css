@@ -1,0 +1,16 @@
+html, body, div
+{
+    border: none;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+}
+
+#web_view
+{
+    border: none;
+    display: block;
+    width: 100%;
+    height: 100%;
+}
