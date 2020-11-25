@@ -1,7 +1,6 @@
 #include <condition_variable>
 #include <mutex>
 #include <sstream>
-#include <iostream>
 #include <list>
 #include <vector>
 
@@ -14,17 +13,19 @@
 
 std::condition_variable work_condition_;
 std::mutex work_mutex_;
-bool exit_{ false };
+bool need_escape_{ false };
 bool need_restart_{ false };
+bool need_exit_{ false };
 struct Message
 {
     std::int32_t sender;
-    const char* id;
-    const char* command;
-    const char* info;
+    std::string id;
+    std::string command;
+    std::string info;
 };
 std::list<Message> messages_;
 std::list<std::string> functions_;
+std::mutex functions_lock_;
 std::vector<uint32_t> pixels_;
 std::mutex pixels_lock_;
 
@@ -35,13 +36,24 @@ extern "C"
         bridge::PostThreadMessage(sender, id, command, info);
     }
 
+    void NeedEscape()
+    {
+        {
+            std::lock_guard<std::mutex> auto_lock{ work_mutex_ };
+            need_escape_ = true;
+        }
+        work_condition_.notify_one();
+    }
+
     const char* PickFunction()
     {
+        std::lock_guard<std::mutex> auto_lock{ functions_lock_ };
         return functions_.front().c_str();
     }
 
     void PopFunction()
     {
+        std::lock_guard<std::mutex> auto_lock{ functions_lock_ };
         functions_.pop_front();
     }
 
@@ -60,6 +72,15 @@ extern "C"
     void UnlockPixels()
     {
         pixels_lock_.unlock();
+    }
+
+    void NeedExit()
+    {
+        {
+            std::lock_guard<std::mutex> auto_lock{ work_mutex_ };
+            need_exit_ = true;
+        }
+        work_condition_.notify_one();
     }
 }
 
@@ -111,7 +132,10 @@ void bridge::RefreshImageView()
 
 void bridge::CallFunction(const char* function)
 {
-    functions_.push_back(function);
+    {
+        std::lock_guard<std::mutex> auto_lock{ functions_lock_ };
+        functions_.push_back(function);
+    }
     MAIN_THREAD_ASYNC_EM_ASM(
     {
         document.getElementById('web_view').contentWindow.eval(
@@ -127,11 +151,24 @@ std::string bridge::GetAsset(const char* key)
 
 std::string bridge::GetPreference(const char* key)
 {
-    return "";
+    char* value = (char*)MAIN_THREAD_EM_ASM_INT(
+    {
+        var value = window.localStorage.getItem(UTF8ToString($0)) || '';
+        var buffer = Module._malloc(value.length + 1);
+        Module.stringToUTF8(value, buffer, value.length + 1);
+        return buffer;
+    }, key);
+    std::string result{ value };
+    free(value);
+    return result;
 }
 
 void bridge::SetPreference(const char* key, const char* value)
 {
+    MAIN_THREAD_EM_ASM(
+    {
+        window.localStorage.setItem(UTF8ToString($0), UTF8ToString($1));
+    }, key, value);
 }
 
 void bridge::PostThreadMessage(const std::int32_t sender, const char* id, const char* command, const char* info)
@@ -153,14 +190,20 @@ void bridge::PostHttp(const std::int32_t sender, const char* id, const char* com
 
 void bridge::PlayAudio(const std::int32_t index)
 {
+    MAIN_THREAD_ASYNC_EM_ASM(
+    {
+        var audio = new Audio(document.getElementById('audio-' + $0).getAttribute('src'));
+        audio.play();
+    }, index);
 }
 
 void bridge::Exit()
 {
-    EM_ASM(
+    MAIN_THREAD_EM_ASM(
     {
         location = "about:blank";
     });
+    NeedExit();
 }
 
 int main()
@@ -173,26 +216,36 @@ int main()
         std::unique_lock<std::mutex> work_locker{ work_mutex_ };
         work_condition_.wait(work_locker, [&]()
         {
-            return exit_ || need_restart_ || !messages_.empty();
+            return need_escape_ || need_restart_ || need_exit_ || !messages_.empty();
         });
-        if (exit_)
+        if (need_exit_)
         {
+            need_exit_ = false;
             break;
         }
-        if (need_restart_)
+        if (need_escape_)
+        {
+            need_escape_ = false;
+            work_locker.unlock();
+            interface::Escape();
+        }
+        else if (need_restart_)
         {
             need_restart_ = false;
             work_locker.unlock();
             interface::Restart();
         }
-        while(!messages_.empty())
+        else
         {
-            Message msg = messages_.front();
-            messages_.pop_front();
-            work_locker.unlock();
-            interface::HandleAsync(msg.sender, msg.id, msg.command, msg.info);
-            work_locker.lock();
-        }
+            while(!messages_.empty())
+            {
+                Message msg = messages_.front();
+                messages_.pop_front();
+                work_locker.unlock();
+                interface::HandleAsync(msg.sender, msg.id.c_str(), msg.command.c_str(), msg.info.c_str());
+                work_locker.lock();
+            }   
+        }        
     }
     interface::Stop();
     interface::Destroy();

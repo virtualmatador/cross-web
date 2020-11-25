@@ -24,8 +24,8 @@ target_compile_options("${CMAKE_PROJECT_NAME}" PRIVATE
     -sUSE_PTHREADS=1
 )
 target_link_options("${CMAKE_PROJECT_NAME}" PRIVATE
-    -sEXPORTED_FUNCTIONS=[_main,_PickFunction,_PopFunction,_PostJsMessage,_CreatePixels,_LockPixels,_UnlockPixels,_Escape,_Handle]
-    -sEXTRA_EXPORTED_RUNTIME_METHODS=['ccall']
+    -sEXPORTED_FUNCTIONS=[_main,_PostJsMessage,_NeedEscape,_NeedExit,_PickFunction,_PopFunction,_CreatePixels,_LockPixels,_UnlockPixels,_Escape,_Handle]
+    -sEXTRA_EXPORTED_RUNTIME_METHODS=['ccall','stringToUTF8']
     -sPROXY_TO_PTHREAD=1
     -sEXIT_RUNTIME=1
     -sALLOW_MEMORY_GROWTH=1
@@ -41,6 +41,7 @@ target_sources("${CMAKE_PROJECT_NAME}" PRIVATE ${main_sources})
 configure_file("index.html" "www/index.html")
 configure_file("index.js" "www/index.js")
 configure_file("index.css" "www/index.css")
+configure_file("close.png" "www/close.png" COPYONLY)
 
 set(RESOLUTIONS 16 32 48 64)
 foreach(RESOLUTION ${RESOLUTIONS})

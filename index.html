@@ -11,6 +11,12 @@
 </head>
 <body>
     <object id="web_view" style="display: block;"></object>
-    <canvas id="image_view" style="display: block;"></canvas>
+    <canvas id="image_view" style="display: block;"
+        onmousedown="ImageMouseDown(event)"
+        onmousemove="ImageMouseMove(event)"
+        onmouseup="ImageMouseUp(event)"
+    ></canvas>
+    <img id="escape" src="close.png" onclick="Escape()" hidden />
+    <div id="audios" style="display: none;"></div>
 </body>
 </html>
