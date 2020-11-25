@@ -6,12 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
     <link rel="stylesheet" href="index.css">
     <script src="${CMAKE_PROJECT_NAME}.js"></script>
-    <script src="index.js"></script>
     <title>${cross_target}</title>
 </head>
 <body>
-    <object id="web_view" style="display: block;"></object>
-    <canvas id="image_view" style="display: block;"
+    <object id="web_view" style="display: none;"></object>
+    <canvas id="image_view" style="display: none;"
         onmousedown="ImageMouseDown(event)"
         onmousemove="ImageMouseMove(event)"
         onmouseup="ImageMouseUp(event)"

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-set(CMAKE_TOOLCHAIN_FILE "~/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake")
+set(CMAKE_TOOLCHAIN_FILE "/usr/local/dev/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 enable_testing()
 
@@ -16,16 +16,18 @@ project(${project_name} VERSION ${cross_version}.${cross_release})
 add_executable("${CMAKE_PROJECT_NAME}" "bridge.cpp")
 set_target_properties("${CMAKE_PROJECT_NAME}" PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "www"
+    LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/ui.js;${CMAKE_CURRENT_SOURCE_DIR}/html.js"
 )
 target_compile_options("${CMAKE_PROJECT_NAME}" PRIVATE
-    -msse -msse2 -msse3 -msimd128
     -sALLOW_MEMORY_GROWTH=1
     -sDISABLE_EXCEPTION_CATCHING=0
     -sUSE_PTHREADS=1
 )
 target_link_options("${CMAKE_PROJECT_NAME}" PRIVATE
+    --pre-js "${CMAKE_CURRENT_SOURCE_DIR}/ui.js"
+    --extern-pre-js "${CMAKE_CURRENT_SOURCE_DIR}/html.js"
     -sEXPORTED_FUNCTIONS=[_main,_PostJsMessage,_NeedEscape,_NeedExit,_PickFunction,_PopFunction,_CreatePixels,_LockPixels,_UnlockPixels,_Escape,_Handle]
-    -sEXTRA_EXPORTED_RUNTIME_METHODS=['ccall','stringToUTF8']
+    -sEXTRA_EXPORTED_RUNTIME_METHODS=['ccall','stringToUTF8','ImageMouseDown','ImageMouseMove','ImageMouseUp','Escape']
     -sPROXY_TO_PTHREAD=1
     -sEXIT_RUNTIME=1
     -sALLOW_MEMORY_GROWTH=1
@@ -39,8 +41,8 @@ file(GLOB main_sources "../../src/*.cpp")
 target_sources("${CMAKE_PROJECT_NAME}" PRIVATE ${main_sources})
 
 configure_file("index.html" "www/index.html")
-configure_file("index.js" "www/index.js")
 configure_file("index.css" "www/index.css")
+configure_file(".htaccess" "www/.htaccess")
 configure_file("close.png" "www/close.png" COPYONLY)
 
 set(RESOLUTIONS 16 32 48 64)
@@ -60,4 +62,4 @@ add_custom_command(OUTPUT "www/favicon.ico"
 )
 
 add_custom_target("assets" ALL
-    COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_CURRENT_SOURCE_DIR}/../../assets" "www/assets")
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/../../assets" "www/assets")

@@ -4,8 +4,7 @@
 #include <list>
 #include <vector>
 
-#include "emmintrin.h"
-#include "emscripten/threading.h"
+#include "emscripten.h"
 
 #include "../core/src/interface.h"
 
@@ -124,9 +123,7 @@ void bridge::RefreshImageView()
 {
     MAIN_THREAD_ASYNC_EM_ASM(
     {
-        var px = Module.ccall('LockPixels', null, null, null);
         RefreshImageView();
-        Module.ccall('UnlockPixels', null, null, null);
     });
 }
 
@@ -153,7 +150,7 @@ std::string bridge::GetPreference(const char* key)
 {
     char* value = (char*)MAIN_THREAD_EM_ASM_INT(
     {
-        var value = window.localStorage.getItem(UTF8ToString($0)) || '';
+        var value = localStorage.getItem(UTF8ToString($0)) || '';
         var buffer = Module._malloc(value.length + 1);
         Module.stringToUTF8(value, buffer, value.length + 1);
         return buffer;
@@ -167,7 +164,7 @@ void bridge::SetPreference(const char* key, const char* value)
 {
     MAIN_THREAD_EM_ASM(
     {
-        window.localStorage.setItem(UTF8ToString($0), UTF8ToString($1));
+        localStorage.setItem(UTF8ToString($0), UTF8ToString($1));
     }, key, value);
 }
 

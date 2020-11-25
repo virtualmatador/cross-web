@@ -10,11 +10,13 @@ function CallHandler(id, command, info)
 function LoadWebView(sender, view_info, html, waves)
 {
     view_id = sender;
-    document.getElementById('image_view').style.display= 'none';
+    document.getElementById('image_view').style.display = 'none';
+    pixels = null;
+    mapped_buffer = null;
+    document.getElementById('web_view').style.display = 'block';
     document.getElementById('web_view').onload = function()
     {
         document.getElementById('web_view').contentWindow.CallHandler = CallHandler;
-        document.getElementById('web_view').style.display = 'block';
         LoadView(view_info, UTF8ToString(waves));
         CallHandler('body', 'ready', '');
     };
@@ -28,8 +30,8 @@ function LoadImageView(sender, view_info, image_width, waves)
     document.getElementById('web_view').data = '';
     document.getElementById('image_view').style.display = 'block';
     var image_height = Math.floor(image_width *
-        document.getElementById('image_view').height /
-        document.getElementById('image_view').width);
+        document.getElementById('image_view').offsetHeight / 
+        document.getElementById('image_view').offsetWidth);
     document.getElementById('image_view').width = image_width;
     document.getElementById('image_view').height = image_height;
     var ctx = document.getElementById('image_view').getContext("2d");
@@ -67,44 +69,16 @@ function LoadView(view_info, waves)
 
 function RefreshImageView()
 {
-    var ctx = document.getElementById('image_view').getContext("2d");
+    Module.ccall('LockPixels', null, null, null);
     pixels.data.set(mapped_buffer);
-    ctx.putImageData(pixels, 0, 0);
+    Module.ccall('UnlockPixels', null, null, null);
+    document.getElementById('image_view').getContext("2d").putImageData(pixels, 0, 0);
 }
 
-function ImageMouseDown(event)
+Module['onRuntimeInitialized'] = function()
 {
-    var x = Math.floor(event.clientX * document.getElementById('image_view').width /
-        document.getElementById('image_view').offsetWidth);
-    var y = Math.floor(event.clientY * document.getElementById('image_view').height /
-        document.getElementById('image_view').offsetHeight);
-    CallHandler("body", "touch-begin", x + ' ' + y);
-}
-
-function ImageMouseMove(event)
-{
-    var x = Math.floor(event.clientX * document.getElementById('image_view').width /
-        document.getElementById('image_view').offsetWidth);
-    var y = Math.floor(event.clientY * document.getElementById('image_view').height /
-        document.getElementById('image_view').offsetHeight);
-    CallHandler("body", "touch-move", x + ' ' + y);
-}
-
-function ImageMouseUp(event)
-{
-    var x = Math.floor(event.clientX * document.getElementById('image_view').width /
-        document.getElementById('image_view').offsetWidth);
-    var y = Math.floor(event.clientY * document.getElementById('image_view').height /
-        document.getElementById('image_view').offsetHeight);
-    CallHandler("body", "touch-end", x + ' ' + y);
-}
-
-function Escape()
-{
-    Module.ccall('NeedEscape', null, null, null);
-}
-
-window.onbeforeunload = function()
-{
-    Module.ccall('NeedExit', null, null, null);
-}
+    window.onbeforeunload = function()
+    {
+        Module.ccall('NeedExit', null, null, null);
+    }
+};
