@@ -49,7 +49,7 @@ set(RESOLUTIONS 16 32 48 64)
 foreach(RESOLUTION ${RESOLUTIONS})
     add_custom_target("${RESOLUTION}-png" ALL DEPENDS "${RESOLUTION}.png")
     add_custom_command(OUTPUT "${RESOLUTION}.png"
-        COMMAND inkscape -e "${RESOLUTION}.png" -w ${RESOLUTION} -h ${RESOLUTION} "${CMAKE_CURRENT_SOURCE_DIR}/../../icon.svg"
+        COMMAND inkscape -o "${RESOLUTION}.png" -w ${RESOLUTION} -h ${RESOLUTION} "${CMAKE_CURRENT_SOURCE_DIR}/../../icon.svg"
         MAIN_DEPENDENCY "../../icon.svg"
     )
     list(APPEND png_targets "${RESOLUTION}-png")
