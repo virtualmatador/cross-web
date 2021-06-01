@@ -3,15 +3,10 @@ set(CMAKE_TOOLCHAIN_FILE "/usr/local/dev/emsdk/upstream/emscripten/cmake/Modules
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 enable_testing()
 
-file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/../../manifest.txt" manifest)
-foreach(key_value ${manifest})
-    string(REGEX MATCH "^[^=]+" key ${key_value})
-    string(REPLACE "${key}=" "" value ${key_value})
-    set(${key} "${value}")
-endforeach()
+include("${CMAKE_CURRENT_SOURCE_DIR}/../core/manifest.cmake")
 
 string(TOLOWER ${cross_target} project_name)
-project(${project_name} VERSION ${cross_version}.${cross_release})
+project(${project_name} VERSION ${cross_version})
 
 add_executable("${CMAKE_PROJECT_NAME}" "bridge.cpp")
 set_target_properties("${CMAKE_PROJECT_NAME}" PROPERTIES
