@@ -52,9 +52,14 @@ foreach(RESOLUTION ${RESOLUTIONS})
 endforeach()
 add_custom_target("favicon_icon" ALL DEPENDS "www/favicon.ico")
 add_custom_command(OUTPUT "www/favicon.ico"
-    COMMAND convert ${png_files} "www/favicon.ico"
+    COMMAND convert ${png_files} "${CMAKE_CURRENT_BINARY_DIR}/www/favicon.ico"
     DEPENDS ${png_targets}
 )
 
 add_custom_target("assets" ALL
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/../../assets" "www/assets")
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/../../assets" "${CMAKE_CURRENT_BINARY_DIR}/www/assets"
+)
+
+add_custom_target("version" ALL
+    COMMAND ${CMAKE_COMMAND} -E echo ${CMAKE_PROJECT_VERSION} > "${CMAKE_CURRENT_BINARY_DIR}/www/version.php"
+)
