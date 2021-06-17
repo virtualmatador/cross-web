@@ -21,7 +21,7 @@ target_compile_options("${CMAKE_PROJECT_NAME}" PRIVATE
 target_link_options("${CMAKE_PROJECT_NAME}" PRIVATE
     --pre-js "${CMAKE_CURRENT_SOURCE_DIR}/ui.js"
     --extern-pre-js "${CMAKE_CURRENT_SOURCE_DIR}/html.js"
-    -sEXPORTED_FUNCTIONS=[_main,_PostJsMessage,_NeedEscape,_NeedExit,_PickFunction,_PopFunction,_CreatePixels,_LockPixels,_UnlockPixels,_Escape,_Handle]
+    -sEXPORTED_FUNCTIONS=[_main,_PostJsMessage,_NeedStart,_NeedStop,_NeedEscape,_NeedExit,_PickFunction,_PopFunction,_CreatePixels,_LockPixels,_UnlockPixels]
     -sEXTRA_EXPORTED_RUNTIME_METHODS=['ccall','stringToUTF8','ImageMouseDown','ImageMouseMove','ImageMouseUp','Escape']
     -sPROXY_TO_PTHREAD=1
     -sEXIT_RUNTIME=1

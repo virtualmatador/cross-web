@@ -6,15 +6,17 @@
 
 #include "emscripten.h"
 
-#include "../core/src/interface.h"
-
 #include "../core/src/bridge.h"
+#include "../core/src/interface.h"
+#include "../core/src/stage.h"
 
 std::condition_variable work_condition_;
 std::mutex work_mutex_;
-bool need_escape_{ false };
-bool need_restart_{ false };
+bool need_start_{ true };
+bool need_stop_{ false };
 bool need_exit_{ false };
+bool started_{ false };
+
 struct Message
 {
     std::int32_t sender;
@@ -22,6 +24,7 @@ struct Message
     std::string command;
     std::string info;
 };
+
 std::list<Message> messages_;
 std::list<std::string> functions_;
 std::mutex functions_lock_;
@@ -32,16 +35,47 @@ extern "C"
 {
     void PostJsMessage(const std::int32_t sender, const char* id, const char* command, const char* info)
     {
-        bridge::PostThreadMessage(sender, id, command, info);
+        {
+            std::lock_guard<std::mutex> auto_lock{ work_mutex_ };
+            messages_.push_back({sender, id, command, info});
+        }
+        work_condition_.notify_one();
+    }
+
+    void NeedExit()
+    {
+        {
+            std::lock_guard<std::mutex> auto_lock{ work_mutex_ };
+            need_exit_ = true;
+        }
+        work_condition_.notify_one();
+    }
+
+    void NeedStart()
+    {
+        {
+            std::lock_guard<std::mutex> auto_lock{ work_mutex_ };
+            need_start_ = true;
+        }
+        work_condition_.notify_one();
+    }
+
+    void NeedStop()
+    {
+        {
+            std::lock_guard<std::mutex> auto_lock{ work_mutex_ };
+            need_stop_ = true;
+        }
+        work_condition_.notify_one();
     }
 
     void NeedEscape()
     {
+        MAIN_THREAD_EM_ASM(
         {
-            std::lock_guard<std::mutex> auto_lock{ work_mutex_ };
-            need_escape_ = true;
-        }
-        work_condition_.notify_one();
+            Module.ccall('PostJsMessage', null, ['number', 'string', 'string', 'string'],
+                [view_id_, "", "escape", ""]);
+        });
     }
 
     const char* PickFunction()
@@ -72,24 +106,15 @@ extern "C"
     {
         pixels_lock_.unlock();
     }
-
-    void NeedExit()
-    {
-        {
-            std::lock_guard<std::mutex> auto_lock{ work_mutex_ };
-            need_exit_ = true;
-        }
-        work_condition_.notify_one();
-    }
 }
 
 void bridge::NeedRestart()
 {
+    MAIN_THREAD_ASYNC_EM_ASM(
     {
-        std::lock_guard<std::mutex> auto_lock{ work_mutex_ };
-        need_restart_ = true;
-    }
-    work_condition_.notify_one();
+        Module.ccall('PostJsMessage', null, ['number', 'string', 'string', 'string'],
+            [view_id_, "", "restart", ""]);
+    });
 }
 
 void bridge::LoadWebView(const std::int32_t sender, const std::int32_t view_info, const char *html, const char* waves)
@@ -137,12 +162,13 @@ void bridge::CallFunction(const char* function)
     {
         document.getElementById('web_view').contentWindow.eval(
             Module.ccall("PickFunction", 'string', null, null));
-        Module.ccall("PopFunction", null, null, null)
+        Module.ccall("PopFunction", null, null, null);
     });
 }
 
 std::string bridge::GetAsset(const char* key)
 {
+    // TODO
     return "";
 }
 
@@ -170,19 +196,21 @@ void bridge::SetPreference(const char* key, const char* value)
 
 void bridge::PostThreadMessage(const std::int32_t sender, const char* id, const char* command, const char* info)
 {
+    MAIN_THREAD_ASYNC_EM_ASM(
     {
-        std::lock_guard<std::mutex> auto_lock{ work_mutex_ };
-        messages_.push_back({sender, id, command, info});
-    }
-    work_condition_.notify_one();
+        Module.ccall('PostJsMessage', null, ['number', 'string', 'string', 'string'],
+            [$0, UTF8ToString($1), UTF8ToString($2), UTF8ToString($3)]);
+    }, sender, id, command, info);
 }
 
 void bridge::AddParam(const char* key, const char* value)
 {
+    // TODO
 }
 
 void bridge::PostHttp(const std::int32_t sender, const char* id, const char* command, const char* url)
 {
+    // TODO
 }
 
 void bridge::PlayAudio(const std::int32_t index)
@@ -196,55 +224,75 @@ void bridge::PlayAudio(const std::int32_t index)
 
 void bridge::Exit()
 {
-    MAIN_THREAD_EM_ASM(
+    MAIN_THREAD_ASYNC_EM_ASM(
     {
         location = "about:blank";
     });
-    NeedExit();
 }
 
 int main()
 {
     interface::Begin();
     interface::Create();
-    interface::Start();
     for(;;)
     {
         std::unique_lock<std::mutex> work_locker{ work_mutex_ };
         work_condition_.wait(work_locker, [&]()
         {
-            return need_escape_ || need_restart_ || need_exit_ || !messages_.empty();
+            return need_exit_ || need_stop_ || need_start_ || !messages_.empty();
         });
         if (need_exit_)
         {
-            need_exit_ = false;
+            work_locker.unlock();
             break;
         }
-        if (need_escape_)
+        else if (need_stop_)
         {
-            need_escape_ = false;
-            work_locker.unlock();
-            interface::Escape();
+            need_stop_ = false;
+            if (started_)
+            {
+                started_ = false;
+                work_locker.unlock();
+                interface::Stop();
+            }
         }
-        else if (need_restart_)
+        else if (need_start_)
         {
-            need_restart_ = false;
-            work_locker.unlock();
-            interface::Restart();
+            need_start_ = false;
+            if (!started_)
+            {
+                started_ = true;
+                work_locker.unlock();
+                interface::Start();
+            }
         }
         else
         {
-            while(!messages_.empty())
+            Message msg = messages_.front();
+            messages_.pop_front();
+            work_locker.unlock();
+            if (!msg.id.empty())
             {
-                Message msg = messages_.front();
-                messages_.pop_front();
-                work_locker.unlock();
                 interface::HandleAsync(msg.sender, msg.id.c_str(), msg.command.c_str(), msg.info.c_str());
-                work_locker.lock();
-            }   
-        }        
+            }
+            else if (msg.sender == core::Stage::index_)
+            {
+                if (msg.command == "restart")
+                {
+                    interface::Restart();
+                }
+                else if (msg.command == "escape")
+                {
+                    interface::Escape();
+                }
+            }
+        }
     }
-    interface::Stop();
+    if (started_)
+    {
+        started_ = false;
+        interface::Stop();
+    }
     interface::Destroy();
     interface::End();
     return 0;
