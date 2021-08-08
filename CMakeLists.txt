@@ -3,12 +3,13 @@ set(CMAKE_TOOLCHAIN_FILE "/usr/local/dev/emsdk/upstream/emscripten/cmake/Modules
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 enable_testing()
 
-include("${CMAKE_CURRENT_SOURCE_DIR}/../core/manifest.cmake")
+include("${CMAKE_CURRENT_SOURCE_DIR}/extern/core/manifest.cmake")
 
 string(TOLOWER ${cross_target} project_name)
 project(${project_name} VERSION ${cross_version})
 
 add_executable("${CMAKE_PROJECT_NAME}" "bridge.cpp")
+target_include_directories("${CMAKE_PROJECT_NAME}" PRIVATE "extern/core/src")
 set_target_properties("${CMAKE_PROJECT_NAME}" PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "www"
     LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/ui.js;${CMAKE_CURRENT_SOURCE_DIR}/html.js"
@@ -22,7 +23,7 @@ target_link_options("${CMAKE_PROJECT_NAME}" PRIVATE
     --pre-js "${CMAKE_CURRENT_SOURCE_DIR}/ui.js"
     --extern-pre-js "${CMAKE_CURRENT_SOURCE_DIR}/html.js"
     -sEXPORTED_FUNCTIONS=[_main,_PostJsMessage,_NeedStart,_NeedStop,_NeedEscape,_NeedExit,_PickFunction,_PopFunction,_CreatePixels,_LockPixels,_UnlockPixels]
-    -sEXTRA_EXPORTED_RUNTIME_METHODS=['ccall','stringToUTF8','ImageMouseDown','ImageMouseMove','ImageMouseUp','Escape']
+    -sEXTRA_EXPORTED_RUNTIME_METHODS=['ccall','stringToUTF8']
     -sPROXY_TO_PTHREAD=1
     -sEXIT_RUNTIME=1
     -sALLOW_MEMORY_GROWTH=1
@@ -30,7 +31,7 @@ target_link_options("${CMAKE_PROJECT_NAME}" PRIVATE
     -sUSE_PTHREADS=1
 )
 set_property(TARGET "${CMAKE_PROJECT_NAME}" PROPERTY CXX_STANDARD 17)
-file(GLOB core_sources "../core/src/*.cpp")
+file(GLOB core_sources "extern/core/src/*.cpp")
 target_sources("${CMAKE_PROJECT_NAME}" PRIVATE ${core_sources})
 file(GLOB main_sources "../../src/*.cpp")
 target_sources("${CMAKE_PROJECT_NAME}" PRIVATE ${main_sources})

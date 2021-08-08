@@ -1,0 +1,3 @@
+[submodule "extern/core"]
+	path = extern/core
+	url = ../cross-core

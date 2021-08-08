@@ -6,9 +6,9 @@
 
 #include "emscripten.h"
 
-#include "../core/src/bridge.h"
-#include "../core/src/interface.h"
-#include "../core/src/stage.h"
+#include "extern/core/src/bridge.h"
+#include "extern/core/src/interface.h"
+#include "extern/core/src/stage.h"
 
 std::condition_variable work_condition_;
 std::mutex work_mutex_;
