@@ -7,7 +7,7 @@ function CallHandler(id, command, info)
     Module.ccall('PostJsMessage', null, ['number', 'string', 'string', 'string'], [view_id_, id, command, info]);
 }
 
-function LoadWebView(sender, view_info, html, waves)
+function LoadWebView(sender, view_info, html)
 {
     view_id_ = sender;
     document.getElementById('image_view').style.display = 'none';
@@ -17,16 +17,16 @@ function LoadWebView(sender, view_info, html, waves)
     document.getElementById('web_view').onload = function()
     {
         document.getElementById('web_view').contentWindow.CallHandler = CallHandler;
-        LoadView(view_info, UTF8ToString(waves));
+        LoadView(view_info);
         setTimeout(function()
         {
             CallHandler('body', 'ready', '');
         }, 0);
     };
-    document.getElementById('web_view').data = 'assets/html/' + UTF8ToString(html) + '.htm';
+    document.getElementById('web_view').data = 'assets/' + UTF8ToString(html) + '.htm';
 }
 
-function LoadImageView(sender, view_info, image_width, waves)
+function LoadImageView(sender, view_info, image_width)
 {
     view_id_ = sender;
     document.getElementById('web_view').style.display = 'none';
@@ -41,14 +41,14 @@ function LoadImageView(sender, view_info, image_width, waves)
     pixels_ = ctx.createImageData(image_width, image_height);
     var pixelsData = Module.ccall('CreatePixels', null, ['number', 'number'], [image_width, image_height]);    
     mapped_buffer_ = new Uint8ClampedArray(Module.HEAPU8.buffer, pixelsData, image_width * image_height * 4);
-    LoadView(view_info, UTF8ToString(waves));
+    LoadView(view_info);
     setTimeout(function()
     {
         CallHandler('body', 'ready', image_width / 10 + ' ' + image_width + ' ' + image_height + ' ' + 33619971);
     }, 0);
 }
 
-function LoadView(view_info, waves)
+function LoadView(view_info)
 {
     if ((view_info & 8) != 0)
     {
@@ -57,19 +57,6 @@ function LoadView(view_info, waves)
     else
     {
         document.getElementById('escape').hidden = true;
-    }
-    document.getElementById('audios').innerHTML = '';
-    if (waves != '')
-    {
-        var audios = waves.split(' ');
-        for (var i = 0; i < audios.length; ++i)
-        {
-            var audio = document.createElement('audio');
-            audio.id = 'audio-' + i;
-            audio.src = 'assets/wave/' + audios[i] + '.wav';
-            audio.type = 'audio/wave';
-            document.getElementById('audios').appendChild(audio);
-        }
     }
 }
 

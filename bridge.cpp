@@ -7,7 +7,7 @@
 #include "emscripten.h"
 
 #include "extern/core/src/bridge.h"
-#include "extern/core/src/interface.h"
+#include "extern/core/src/cross.h"
 #include "extern/core/src/stage.h"
 
 std::condition_variable work_condition_;
@@ -117,20 +117,20 @@ void bridge::NeedRestart()
     });
 }
 
-void bridge::LoadWebView(const std::int32_t sender, const std::int32_t view_info, const char *html, const char* waves)
+void bridge::LoadWebView(const std::int32_t sender, const std::int32_t view_info, const char *html)
 {
     MAIN_THREAD_ASYNC_EM_ASM(
     {
-        LoadWebView($0, $1, $2, $3);
-    }, sender, view_info, html, waves);
+        LoadWebView($0, $1, $2);
+    }, sender, view_info, html);
 }
 
-void bridge::LoadImageView(const std::int32_t sender, const std::int32_t view_info, const std::int32_t image_width, const char* waves)
+void bridge::LoadImageView(const std::int32_t sender, const std::int32_t view_info, const std::int32_t image_width)
 {
     MAIN_THREAD_ASYNC_EM_ASM(
     {
-        LoadImageView($0, $1, $2, $3);
-    }, sender, view_info, image_width, waves);
+        LoadImageView($0, $1, $2);
+    }, sender, view_info, image_width);
 }
 
 std::uint32_t* bridge::GetPixels()
@@ -194,7 +194,7 @@ void bridge::SetPreference(const char* key, const char* value)
     }, key, value);
 }
 
-void bridge::PostThreadMessage(const std::int32_t sender, const char* id, const char* command, const char* info)
+void bridge::AsyncMessage(const std::int32_t sender, const char* id, const char* command, const char* info)
 {
     MAIN_THREAD_ASYNC_EM_ASM(
     {
@@ -213,15 +213,6 @@ void bridge::PostHttp(const std::int32_t sender, const char* id, const char* com
     // TODO
 }
 
-void bridge::PlayAudio(const std::int32_t index)
-{
-    MAIN_THREAD_ASYNC_EM_ASM(
-    {
-        var audio = new Audio(document.getElementById('audio-' + $0).getAttribute('src'));
-        audio.play();
-    }, index);
-}
-
 void bridge::Exit()
 {
     MAIN_THREAD_ASYNC_EM_ASM(
@@ -232,8 +223,8 @@ void bridge::Exit()
 
 int main()
 {
-    interface::Begin();
-    interface::Create();
+    cross::Begin();
+    cross::Create();
     for(;;)
     {
         std::unique_lock<std::mutex> work_locker{ work_mutex_ };
@@ -253,7 +244,7 @@ int main()
             {
                 started_ = false;
                 work_locker.unlock();
-                interface::Stop();
+                cross::Stop();
             }
         }
         else if (need_start_)
@@ -263,7 +254,7 @@ int main()
             {
                 started_ = true;
                 work_locker.unlock();
-                interface::Start();
+                cross::Start();
             }
         }
         else
@@ -273,17 +264,17 @@ int main()
             work_locker.unlock();
             if (!msg.id.empty())
             {
-                interface::HandleAsync(msg.sender, msg.id.c_str(), msg.command.c_str(), msg.info.c_str());
+                cross::HandleAsync(msg.sender, msg.id.c_str(), msg.command.c_str(), msg.info.c_str());
             }
             else if (msg.sender == core::Stage::index_)
             {
                 if (msg.command == "restart")
                 {
-                    interface::Restart();
+                    cross::Restart();
                 }
                 else if (msg.command == "escape")
                 {
-                    interface::Escape();
+                    cross::Escape();
                 }
             }
         }
@@ -291,9 +282,9 @@ int main()
     if (started_)
     {
         started_ = false;
-        interface::Stop();
+        cross::Stop();
     }
-    interface::Destroy();
-    interface::End();
+    cross::Destroy();
+    cross::End();
     return 0;
 }
