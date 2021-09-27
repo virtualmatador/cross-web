@@ -28,8 +28,6 @@ struct Message
 std::list<Message> messages_;
 std::list<std::string> functions_;
 std::mutex functions_lock_;
-std::vector<uint32_t> pixels_;
-std::mutex pixels_lock_;
 
 extern "C"
 {
@@ -89,23 +87,6 @@ extern "C"
         std::lock_guard<std::mutex> auto_lock{ functions_lock_ };
         functions_.pop_front();
     }
-
-    void* CreatePixels(const std::int32_t image_width, const std::int32_t image_height)
-    {
-        std::lock_guard<std::mutex> auto_lock{ pixels_lock_ };
-        pixels_.resize(image_width * image_height);
-        return pixels_.data();
-    }
-
-    void LockPixels()
-    {
-        pixels_lock_.lock();
-    }
-
-    void UnlockPixels()
-    {
-        pixels_lock_.unlock();
-    }
 }
 
 void bridge::NeedRestart()
@@ -117,39 +98,25 @@ void bridge::NeedRestart()
     });
 }
 
-void bridge::LoadWebView(const std::int32_t sender, const std::int32_t view_info, const char *html)
+void bridge::LoadView(const std::int32_t sender, const std::int32_t view_info, const char *html)
 {
     MAIN_THREAD_ASYNC_EM_ASM(
     {
-        LoadWebView($0, $1, $2);
+        view_id_ = $0;
+        document.getElementById('web_view').onload = function()
+        {
+            document.getElementById('web_view').contentWindow.CallHandler = CallHandler;
+            document.getElementById('web_view').contentWindow.cross_asset_domain_ = '';
+            document.getElementById('web_view').contentWindow.cross_asset_async_ = true;
+            document.getElementById('web_view').contentWindow.cross_pointer_type_ = 'mouse';
+            document.getElementById('web_view').contentWindow.cross_pointer_upsidedown_ = true;
+            setTimeout(function()
+            {
+                CallHandler('body', 'ready', '');
+            }, 0);
+        };
+        document.getElementById('web_view').data = 'assets/' + UTF8ToString($2) + '.htm';
     }, sender, view_info, html);
-}
-
-void bridge::LoadImageView(const std::int32_t sender, const std::int32_t view_info, const std::int32_t image_width)
-{
-    MAIN_THREAD_ASYNC_EM_ASM(
-    {
-        LoadImageView($0, $1, $2);
-    }, sender, view_info, image_width);
-}
-
-std::uint32_t* bridge::GetPixels()
-{
-    pixels_lock_.lock();
-    return pixels_.data();
-}
-
-void bridge::ReleasePixels(std::uint32_t* const pixels)
-{
-    pixels_lock_.unlock();
-}
-
-void bridge::RefreshImageView()
-{
-    MAIN_THREAD_ASYNC_EM_ASM(
-    {
-        RefreshImageView();
-    });
 }
 
 void bridge::CallFunction(const char* function)
@@ -164,12 +131,6 @@ void bridge::CallFunction(const char* function)
             Module.ccall("PickFunction", 'string', null, null));
         Module.ccall("PopFunction", null, null, null);
     });
-}
-
-std::string bridge::GetAsset(const char* key)
-{
-    // TODO
-    return "";
 }
 
 std::string bridge::GetPreference(const char* key)
@@ -211,6 +172,48 @@ void bridge::AddParam(const char* key, const char* value)
 void bridge::PostHttp(const std::int32_t sender, const char* id, const char* command, const char* url)
 {
     // TODO
+}
+
+void bridge::CreateImage(const char* id, const char* parent)
+{
+    MAIN_THREAD_EM_ASM(
+    {
+        var id = UTF8ToString($0);
+        var web_view = document.getElementById('web_view').contentWindow;
+        var img = document.createElement('canvas');
+        img.setAttribute('id', id);
+        web_view.document.getElementById(UTF8ToString($1)).appendChild(img);
+        delete pixels_[id];
+    }, id, parent);
+}
+
+void bridge::ResetImage(const std::int32_t sender, const std::int32_t index, const char* id)
+{
+    std::ostringstream os;
+    os << "cross://" << sender << '/' << id << '/' << index;
+    cross::FeedUri(os.str().c_str(), [&](const std::vector<unsigned char>& input)
+    {
+        MAIN_THREAD_EM_ASM(
+        {
+            var id = UTF8ToString($0);
+            var img = document.getElementById('web_view').contentWindow.document.getElementById(id);
+            var ctx = img.getContext('2d');
+            var bmp_width = $3;
+            var bmp_height = $4;
+            if (!pixels_[id] ||
+                pixels_[id].width != bmp_width ||
+                pixels_[id].height != bmp_height)
+            {
+                img.width = bmp_width;
+                img.height = bmp_height;
+                pixels_[id] = ctx.createImageData(bmp_width, bmp_height);
+            }
+            var mapped_buffer = new Uint8ClampedArray(Module.HEAPU8.buffer, $1, $2);
+            pixels_[id].data.set(mapped_buffer);
+            ctx.putImageData(pixels_[id], 0, 0);
+        }, id, input.data() + 54, input.size() - 54,
+            *(int32_t*)&input[18], *(int32_t*)&input[22]);
+    });
 }
 
 void bridge::Exit()

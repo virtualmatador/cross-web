@@ -12,7 +12,7 @@ add_executable("${CMAKE_PROJECT_NAME}" "bridge.cpp")
 target_include_directories("${CMAKE_PROJECT_NAME}" PRIVATE "extern/core/src")
 set_target_properties("${CMAKE_PROJECT_NAME}" PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "www"
-    LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/ui.js;${CMAKE_CURRENT_SOURCE_DIR}/html.js"
+    LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/ui.js"
 )
 target_compile_options("${CMAKE_PROJECT_NAME}" PRIVATE
     -sALLOW_MEMORY_GROWTH=1
@@ -21,8 +21,7 @@ target_compile_options("${CMAKE_PROJECT_NAME}" PRIVATE
 )
 target_link_options("${CMAKE_PROJECT_NAME}" PRIVATE
     --pre-js "${CMAKE_CURRENT_SOURCE_DIR}/ui.js"
-    --extern-pre-js "${CMAKE_CURRENT_SOURCE_DIR}/html.js"
-    -sEXPORTED_FUNCTIONS=[_main,_PostJsMessage,_NeedStart,_NeedStop,_NeedEscape,_NeedExit,_PickFunction,_PopFunction,_CreatePixels,_LockPixels,_UnlockPixels]
+    -sEXPORTED_FUNCTIONS=[_main,_PostJsMessage,_NeedStart,_NeedStop,_NeedEscape,_NeedExit,_PickFunction,_PopFunction]
     -sEXTRA_EXPORTED_RUNTIME_METHODS=['ccall','stringToUTF8']
     -sPROXY_TO_PTHREAD=1
     -sEXIT_RUNTIME=1
