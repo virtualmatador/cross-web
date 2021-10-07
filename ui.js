@@ -12,4 +12,15 @@ Module['onRuntimeInitialized'] = function()
     {
         Module.ccall('NeedExit', null, null, null);
     };
+    document.onvisibilitychange = function()
+    {
+        if (document.visibilityState === 'visible')
+        {
+            Module.ccall('NeedStart', null, null, null);
+        }
+        else
+        {
+            Module.ccall('NeedStop', null, null, null);
+        }
+    }; 
 };
