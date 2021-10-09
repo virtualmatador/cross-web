@@ -1,8 +1,24 @@
-html, body, #web_view
+html
 {
-    border: none;
     margin: 0;
     padding: 0;
     width: 100vw;
     height: 100vh;
+}
+
+body
+{
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+#web_view
+{
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
 }
