@@ -8,6 +8,10 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/extern/core/manifest.cmake")
 string(TOLOWER ${cross_target} project_name)
 project(${project_name} VERSION ${cross_version})
 
+add_compile_definitions(PROJECT_NAME="${CMAKE_PROJECT_NAME}")
+add_compile_definitions(PROJECT_VERSION="${CMAKE_PROJECT_VERSION}")
+add_compile_definitions(APPLICATION_ID="${cross_identifier}")
+
 add_executable("${CMAKE_PROJECT_NAME}" "bridge.cpp")
 target_include_directories("${CMAKE_PROJECT_NAME}" PRIVATE "extern/core/src")
 set_target_properties("${CMAKE_PROJECT_NAME}" PROPERTIES

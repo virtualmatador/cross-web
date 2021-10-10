@@ -137,11 +137,12 @@ std::string bridge::GetPreference(const char* key)
 {
     char* value = (char*)MAIN_THREAD_EM_ASM_INT(
     {
-        var value = localStorage.getItem(UTF8ToString($0)) || '';
+        var value = localStorage.getItem(
+            UTF8ToString($0) + '/' + UTF8ToString($1)) || '';
         var buffer = Module._malloc(value.length + 1);
         Module.stringToUTF8(value, buffer, value.length + 1);
         return buffer;
-    }, key);
+    }, PROJECT_NAME, key);
     std::string result{ value };
     free(value);
     return result;
@@ -151,8 +152,9 @@ void bridge::SetPreference(const char* key, const char* value)
 {
     MAIN_THREAD_EM_ASM(
     {
-        localStorage.setItem(UTF8ToString($0), UTF8ToString($1));
-    }, key, value);
+        localStorage.setItem(
+            UTF8ToString($0) + '/' + UTF8ToString($1), UTF8ToString($2));
+    }, PROJECT_NAME, key, value);
 }
 
 void bridge::AsyncMessage(const std::int32_t sender, const char* id, const char* command, const char* info)
