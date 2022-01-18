@@ -19,14 +19,13 @@ set_target_properties("${CMAKE_PROJECT_NAME}" PROPERTIES
     LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/ui.js"
 )
 target_compile_options("${CMAKE_PROJECT_NAME}" PRIVATE
-    -sALLOW_MEMORY_GROWTH=1
     -sDISABLE_EXCEPTION_CATCHING=0
     -sUSE_PTHREADS=1
 )
 target_link_options("${CMAKE_PROJECT_NAME}" PRIVATE
     --pre-js "${CMAKE_CURRENT_SOURCE_DIR}/ui.js"
     -sEXPORTED_FUNCTIONS=[_main,_PostJsMessage,_NeedStart,_NeedStop,_NeedEscape,_NeedExit,_PickFunction,_PopFunction]
-    -sEXTRA_EXPORTED_RUNTIME_METHODS=['ccall','stringToUTF8']
+    -sEXPORTED_RUNTIME_METHODS=['ccall','stringToUTF8']
     -sPROXY_TO_PTHREAD=1
     -sEXIT_RUNTIME=1
     -sALLOW_MEMORY_GROWTH=1
@@ -41,8 +40,6 @@ target_sources("${CMAKE_PROJECT_NAME}" PRIVATE ${main_sources})
 
 configure_file("index.html" "www/index.html")
 configure_file("index.css" "www/index.css")
-configure_file(".htaccess" "www/.htaccess")
-configure_file("close.png" "www/close.png" COPYONLY)
 
 set(RESOLUTIONS 16 32 48 64)
 foreach(RESOLUTION ${RESOLUTIONS})

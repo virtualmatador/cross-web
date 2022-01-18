@@ -103,19 +103,17 @@ void bridge::LoadView(const std::int32_t sender, const std::int32_t view_info, c
     MAIN_THREAD_ASYNC_EM_ASM(
     {
         view_id_ = $0;
-        document.getElementById('web_view').onload = function()
+        const web_view = document.getElementById('web_view');
+        web_view.onload = function()
         {
-            document.getElementById('web_view').contentWindow.CallHandler = CallHandler;
-            document.getElementById('web_view').contentWindow.cross_asset_domain_ = '';
-            document.getElementById('web_view').contentWindow.cross_asset_async_ = true;
-            document.getElementById('web_view').contentWindow.cross_pointer_type_ = 'mouse';
-            document.getElementById('web_view').contentWindow.cross_pointer_upsidedown_ = true;
-            setTimeout(function()
-            {
-                CallHandler('body', 'ready', '');
-            }, 0);
+            web_view.contentWindow.CallHandler = CallHandler;
+            web_view.contentWindow.cross_asset_domain_ = '';
+            web_view.contentWindow.cross_asset_async_ = true;
+            web_view.contentWindow.cross_pointer_type_ = 'mouse';
+            web_view.contentWindow.cross_pointer_upsidedown_ = true;
+            setTimeout(web_view.contentWindow.CallHandler, 0, 'body', 'ready', '');
         };
-        document.getElementById('web_view').data = 'assets/' + UTF8ToString($2) + '.htm';
+        web_view.contentWindow.location.replace('assets/' + UTF8ToString($2) + '.htm');
     }, sender, view_info, html);
 }
 
