@@ -1,13 +1,11 @@
-html
-{
+html {
     margin: 0;
     padding: 0;
-    width: 100vw;
-    height: 100vh;
+    width: 100dvw;
+    height: 100dvh;
 }
 
-body
-{
+body {
     margin: 0;
     padding: 0;
     width: 100%;
@@ -15,8 +13,8 @@ body
     overflow: hidden;
 }
 
-#web_view
-{
+#web_view {
+    border: 0;
     margin: 0;
     padding: 0;
     width: 100%;
