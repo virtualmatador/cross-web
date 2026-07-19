@@ -62,5 +62,5 @@ add_custom_target("assets" ALL
 )
 
 add_custom_target("version" ALL
-    COMMAND ${CMAKE_COMMAND} -E echo ${CMAKE_PROJECT_VERSION} > "${CMAKE_CURRENT_BINARY_DIR}/www/version.txt"
+    COMMAND ${CMAKE_COMMAND} -E echo ${CMAKE_PROJECT_VERSION}-${BUILD_NUMBER} > "${CMAKE_CURRENT_BINARY_DIR}/www/version.txt"
 )
