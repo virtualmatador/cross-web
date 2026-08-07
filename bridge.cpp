@@ -98,7 +98,7 @@ void bridge::NeedRestart()
     });
 }
 
-void bridge::LoadView(const std::int32_t sender, const std::int32_t view_info, const char *html)
+void bridge::LoadView(const std::int32_t sender, const char *html)
 {
     MAIN_THREAD_ASYNC_EM_ASM(
     {
@@ -113,8 +113,20 @@ void bridge::LoadView(const std::int32_t sender, const std::int32_t view_info, c
             web_view.contentWindow.cross_pointer_upsidedown_ = true;
             setTimeout(web_view.contentWindow.CallHandler, 0, 'body', 'ready', '');
         };
-        web_view.contentWindow.location.replace('assets/' + UTF8ToString($2) + '.htm');
-    }, sender, view_info, html);
+        web_view.contentWindow.location.replace('assets/' + UTF8ToString($1) + '.htm');
+    }, sender, html);
+}
+
+void bridge::SetScreenOn(bool)
+{
+}
+
+void bridge::SetAudioNoSolo(bool)
+{
+}
+
+void bridge::SetLayout(bool, bool)
+{
 }
 
 void bridge::CallFunction(const char* function)
