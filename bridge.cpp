@@ -8,7 +8,6 @@
 
 #include "extern/core/src/bridge.h"
 #include "extern/core/src/cross.h"
-#include "extern/core/src/stage.h"
 
 std::condition_variable work_condition_;
 std::mutex work_mutex_;
@@ -54,6 +53,7 @@ extern "C"
         {
             std::lock_guard<std::mutex> auto_lock{ work_mutex_ };
             need_start_ = true;
+            need_stop_ = false;
         }
         work_condition_.notify_one();
     }
@@ -63,6 +63,7 @@ extern "C"
         {
             std::lock_guard<std::mutex> auto_lock{ work_mutex_ };
             need_stop_ = true;
+            need_start_ = false;
         }
         work_condition_.notify_one();
     }
@@ -89,31 +90,33 @@ extern "C"
     }
 }
 
-void bridge::NeedRestart()
-{
-    MAIN_THREAD_ASYNC_EM_ASM(
-    {
-        Module.ccall('PostJsMessage', null, ['number', 'string', 'string', 'string'],
-            [view_id_, "", "restart", ""]);
-    });
-}
-
 void bridge::LoadView(const std::int32_t sender, const char *html)
 {
     MAIN_THREAD_ASYNC_EM_ASM(
     {
-        view_id_ = $0;
+        const receiver = $0;
+        view_id_ = receiver;
         const web_view = document.getElementById('web_view');
+        const receiver_query = '?cross_receiver=' + receiver;
+        const receiver_hash = '#cross-' + receiver;
         web_view.onload = function()
         {
-            web_view.contentWindow.CallHandler = CallHandler;
+            if (web_view.contentWindow.location.hash !== receiver_hash)
+                return;
+            web_view.contentWindow.CallHandler = function(id, command, info)
+            {
+                Module.ccall('PostJsMessage', null,
+                    ['number', 'string', 'string', 'string'],
+                    [receiver, id, command, info]);
+            };
             web_view.contentWindow.cross_asset_domain_ = '';
             web_view.contentWindow.cross_asset_async_ = true;
             web_view.contentWindow.cross_pointer_type_ = 'mouse';
             web_view.contentWindow.cross_pointer_upsidedown_ = true;
             setTimeout(web_view.contentWindow.CallHandler, 0, 'body', 'ready', '');
         };
-        web_view.contentWindow.location.replace('assets/' + UTF8ToString($1) + '.htm');
+        web_view.contentWindow.location.replace(
+            'assets/' + UTF8ToString($1) + '.htm' + receiver_query + receiver_hash);
     }, sender, html);
 }
 
@@ -281,13 +284,9 @@ int main()
             {
                 cross::HandleAsync(msg.sender, msg.id.c_str(), msg.command.c_str(), msg.info.c_str());
             }
-            else if (msg.sender == core::Stage::index_)
+            else if (msg.sender == cross::StageIndex())
             {
-                if (msg.command == "restart")
-                {
-                    cross::Restart();
-                }
-                else if (msg.command == "escape")
+                if (msg.command == "escape")
                 {
                     cross::Escape();
                 }

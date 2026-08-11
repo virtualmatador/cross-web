@@ -8,11 +8,18 @@ function CallHandler(id, command, info)
 
 Module['onRuntimeInitialized'] = function()
 {
-    window.onbeforeunload = function()
+    window.addEventListener('pagehide', function(event)
     {
-        Module.ccall('NeedExit', null, null, null);
-    };
-    document.onvisibilitychange = function()
+        Module.ccall(event.persisted ? 'NeedStop' : 'NeedExit', null, null, null);
+    });
+    window.addEventListener('pageshow', function(event)
+    {
+        if (event.persisted)
+        {
+            Module.ccall('NeedStart', null, null, null);
+        }
+    });
+    document.addEventListener('visibilitychange', function()
     {
         if (document.visibilityState === 'visible')
         {
@@ -22,5 +29,9 @@ Module['onRuntimeInitialized'] = function()
         {
             Module.ccall('NeedStop', null, null, null);
         }
-    }; 
+    });
+    if (document.visibilityState !== 'visible')
+    {
+        Module.ccall('NeedStop', null, null, null);
+    }
 };
