@@ -1,7 +1,10 @@
 #include <condition_variable>
+#include <cstdlib>
+#include <list>
+#include <memory>
 #include <mutex>
 #include <sstream>
-#include <list>
+#include <utility>
 #include <vector>
 
 #include "emscripten.h"
@@ -146,28 +149,37 @@ void bridge::CallFunction(const char* function)
     });
 }
 
-std::string bridge::GetPreference(const char* key)
+void bridge::Restore(application::Completion completion)
 {
     char* value = (char*)MAIN_THREAD_EM_ASM_INT(
     {
-        var value = localStorage.getItem(
-            UTF8ToString($0) + '/' + UTF8ToString($1)) || '';
-        var buffer = Module._malloc(value.length + 1);
-        Module.stringToUTF8(value, buffer, value.length + 1);
+        const value = localStorage.getItem(UTF8ToString($0) + '/SAVE') || '';
+        const size = Module.lengthBytesUTF8(value) + 1;
+        const buffer = Module._malloc(size);
+        Module.stringToUTF8(value, buffer, size);
         return buffer;
-    }, PROJECT_NAME, key);
-    std::string result{ value };
-    free(value);
-    return result;
+    }, PROJECT_NAME);
+    auto input = std::make_shared<std::istringstream>(value);
+    std::free(value);
+    application::Restore(*input,
+        [input, completion = std::move(completion)]() mutable
+        {
+            completion();
+            input.reset();
+        });
 }
 
-void bridge::SetPreference(const char* key, const char* value)
+void bridge::Checkpoint()
 {
+    std::ostringstream output;
+    application::Checkpoint(output);
+    if (!output)
+        return;
+    const std::string value = output.str();
     MAIN_THREAD_EM_ASM(
     {
-        localStorage.setItem(
-            UTF8ToString($0) + '/' + UTF8ToString($1), UTF8ToString($2));
-    }, PROJECT_NAME, key, value);
+        localStorage.setItem(UTF8ToString($0) + '/SAVE', UTF8ToString($1));
+    }, PROJECT_NAME, value.c_str());
 }
 
 void bridge::AsyncMessage(const std::int32_t sender, const char* id, const char* command, const char* info)
